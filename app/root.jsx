@@ -1,4 +1,5 @@
 import {Analytics, getShopAnalytics, useNonce} from '@shopify/hydrogen';
+import { useEffect, useState } from 'react';
 import {
   Outlet,
   useRouteError,
@@ -15,36 +16,16 @@ import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
 import {PageLayout} from './components/PageLayout';
+import { storeData } from './storeData';
 
-/**
- * This is important to avoid re-fetching root queries on sub-navigations
- * @type {ShouldRevalidateFunction}
- */
 export const shouldRevalidate = ({formMethod, currentUrl, nextUrl}) => {
-  // revalidate when a mutation is performed e.g add to cart, login...
   if (formMethod && formMethod !== 'GET') return true;
 
-  // revalidate when manually revalidating via useRevalidator
   if (currentUrl.toString() === nextUrl.toString()) return true;
 
-  // Defaulting to no revalidation for root loader data to improve performance.
-  // When using this feature, you risk your UI getting out of sync with your server.
-  // Use with caution. If you are uncomfortable with this optimization, update the
-  // line below to `return defaultShouldRevalidate` instead.
-  // For more details see: https://remix.run/docs/en/main/route/should-revalidate
   return false;
 };
 
-/**
- * The main and reset stylesheets are added in the Layout component
- * to prevent a bug in development HMR updates.
- *
- * This avoids the "failed to execute 'insertBefore' on 'Node'" error
- * that occurs after editing and navigating to another page.
- *
- * It's a temporary fix until the issue is resolved.
- * https://github.com/remix-run/remix/issues/9242
- */
 export function links() {
   return [
     {
@@ -59,14 +40,9 @@ export function links() {
   ];
 }
 
-/**
- * @param {Route.LoaderArgs} args
- */
 export async function loader(args) {
-  // Start fetching non-critical data without blocking time to first byte
   const deferredData = loadDeferredData(args);
 
-  // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
 
   const {storefront, env} = args.context;
@@ -83,18 +59,12 @@ export async function loader(args) {
       checkoutDomain: env.PUBLIC_CHECKOUT_DOMAIN,
       storefrontAccessToken: env.PUBLIC_STOREFRONT_API_TOKEN,
       withPrivacyBanner: false,
-      // localize the privacy banner
       country: args.context.storefront.i18n.country,
       language: args.context.storefront.i18n.language,
     },
   };
 }
 
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- * @param {Route.LoaderArgs}
- */
 async function loadCriticalData({context}) {
   const {storefront} = context;
 
@@ -105,22 +75,14 @@ async function loadCriticalData({context}) {
         headerMenuHandle: 'main-menu', // Adjust to your header menu handle
       },
     }),
-    // Add other queries here, so that they are loaded in parallel
   ]);
 
   return {header};
 }
 
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- * @param {Route.LoaderArgs}
- */
 function loadDeferredData({context}) {
   const {storefront, customerAccount, cart} = context;
 
-  // defer the footer query (below the fold)
   const footer = storefront
     .query(FOOTER_QUERY, {
       cache: storefront.CacheLong(),
@@ -129,7 +91,6 @@ function loadDeferredData({context}) {
       },
     })
     .catch((error) => {
-      // Log query errors, but don't throw them so the page can still render
       console.error(error);
       return null;
     });
@@ -140,9 +101,6 @@ function loadDeferredData({context}) {
   };
 }
 
-/**
- * @param {{children?: React.ReactNode}}
- */
 export function Layout({children}) {
   const nonce = useNonce();
 
@@ -161,29 +119,43 @@ export function Layout({children}) {
         {children}
         <ScrollRestoration nonce={nonce} />
         <Scripts nonce={nonce} />
+        <script src="http://localhost:5173/pa-widgets.js" defer></script>
       </body>
     </html>
   );
 }
 
 export default function App() {
-  /** @type {RootLoader} */
   const data = useRouteLoaderData('root');
+  const [availableWidgets, setAvailableWidgets] = useState([]);
 
-  if (!data) {
-    return <Outlet />;
+  if(typeof window !== 'undefined') {
+    window.paDiscoveryOsApp = window.paDiscoveryOsApp || {};
+    window.paDiscoveryOsApp.storeData = storeData;
   }
 
+  useEffect(() => {
+    const handleContextReady = (event) => {
+      console.log("EVENT FIRED! Widgets available:", event.detail?.widgets);
+      setAvailableWidgets(event.detail?.widgets || []);
+    };
+
+    window.addEventListener('pa-context-ready', handleContextReady);
+    return () => window.removeEventListener('pa-context-ready', handleContextReady);
+  }, []);
+
   return (
-    <Analytics.Provider
-      cart={data.cart}
-      shop={data.shop}
-      consent={data.consent}
-    >
-      <PageLayout {...data}>
+    <pa-context-provider>
+      {data ? (
+        <Analytics.Provider cart={data.cart} shop={data.shop} consent={data.consent}>
+          <PageLayout {...data}>
+            <Outlet />
+          </PageLayout>
+        </Analytics.Provider>
+      ) : (
         <Outlet />
-      </PageLayout>
-    </Analytics.Provider>
+      )}
+    </pa-context-provider>
   );
 }
 
@@ -214,6 +186,4 @@ export function ErrorBoundary() {
 
 /** @typedef {LoaderReturnData} RootLoader */
 
-/** @typedef {import('react-router').ShouldRevalidateFunction} ShouldRevalidateFunction */
-/** @typedef {import('./+types/root').Route} Route */
-/** @typedef {ReturnType<typeof useLoaderData<typeof loader>>} LoaderReturnData */
+/** @typedef {ReturnType<typeof useRouteLoaderData<typeof loader>>} LoaderReturnData */
