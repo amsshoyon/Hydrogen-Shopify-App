@@ -1,97 +1,81 @@
 import {useLoaderData, Link} from 'react-router';
-import {getPaginationVariables, Image} from '@shopify/hydrogen';
-import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
+import {Image} from '@shopify/hydrogen';
+import {
+  getPagePaginationState,
+  getPagePaginationVariables,
+} from '~/lib/pagination';
+import {PagePagination} from '~/components/PagePagination';
 
-/**
- * @param {Route.LoaderArgs} args
- */
 export async function loader(args) {
-  // Start fetching non-critical data without blocking time to first byte
   const deferredData = loadDeferredData(args);
-
-  // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
-
   return {...deferredData, ...criticalData};
 }
 
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- * @param {Route.LoaderArgs}
- */
 async function loadCriticalData({context, request}) {
-  const paginationVariables = getPaginationVariables(request, {
-    pageBy: 4,
+  const paginationState = getPagePaginationState(request);
+  const paginationVariables = getPagePaginationVariables(request, {
+    pageBy: 32,
   });
 
   const [{collections}] = await Promise.all([
     context.storefront.query(COLLECTIONS_QUERY, {
       variables: paginationVariables,
     }),
-    // Add other queries here, so that they are loaded in parallel
   ]);
 
-  return {collections};
+  return {collections, ...paginationState};
 }
 
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- * @param {Route.LoaderArgs}
- */
 function loadDeferredData({context}) {
   return {};
 }
 
 export default function Collections() {
-  /** @type {LoaderReturnData} */
-  const {collections} = useLoaderData();
+  const {collections, page, cursors} = useLoaderData();
 
   return (
-    <div className="collections">
-      <h1>Collections</h1>
-      <PaginatedResourceSection
-        connection={collections}
-        resourcesClassName="collections-grid"
-      >
-        {({node: collection, index}) => (
+    <div className="py-4 md:py-8">
+      <h1 className="text-2xl md:text-3xl font-bold text-primary mb-8">
+        Collections
+      </h1>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        {collections.nodes.map((collection, index) => (
           <CollectionItem
             key={collection.id}
             collection={collection}
             index={index}
           />
-        )}
-      </PaginatedResourceSection>
+        ))}
+      </div>
+      <PagePagination pageInfo={collections.pageInfo} page={page} cursors={cursors} />
     </div>
   );
 }
 
-/**
- * @param {{
- *   collection: CollectionFragment;
- *   index: number;
- * }}
- */
 function CollectionItem({collection, index}) {
   return (
     <Link
-      className="collection-item"
       key={collection.id}
       to={`/collections/${collection.handle}`}
       prefetch="intent"
+      className="group block border border-gray-200 rounded-xl p-4 text-center flex flex-col items-center justify-center hover:shadow-md transition-shadow duration-300"
     >
       {collection?.image && (
-        <Image
-          alt={collection.image.altText || collection.title}
-          aspectRatio="1/1"
-          data={collection.image}
-          loading={index < 3 ? 'eager' : undefined}
-          sizes="(min-width: 45em) 400px, 100vw"
-        />
+        <div className="aspect-square overflow-hidden rounded-xl bg-surface mb-3">
+          <Image
+            alt={collection.image.altText || collection.title}
+            aspectRatio="1/1"
+            data={collection.image}
+            loading={index < 3 ? 'eager' : undefined}
+            sizes="(min-width: 45em) 400px, 100vw"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        </div>
       )}
-      <h5>{collection.title}</h5>
+      <h5 className="text-lg font-medium text-primary group-hover:text-accent transition-colors">
+        {collection.title}
+      </h5>
     </Link>
   );
 }

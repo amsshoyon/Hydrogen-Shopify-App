@@ -1,22 +1,13 @@
-import {useLoaderData, data} from 'react-router';
+import {data, useLoaderData} from 'react-router';
 import {CartForm} from '@shopify/hydrogen';
 import {CartMain} from '~/components/CartMain';
 
-/**
- * @type {Route.MetaFunction}
- */
 export const meta = () => {
   return [{title: `Hydrogen | Cart`}];
 };
 
-/**
- * @type {HeadersFunction}
- */
 export const headers = ({actionHeaders}) => actionHeaders;
 
-/**
- * @param {Route.ActionArgs}
- */
 export async function action({request, context}) {
   const {cart} = context;
 
@@ -43,21 +34,14 @@ export async function action({request, context}) {
       break;
     case CartForm.ACTIONS.DiscountCodesUpdate: {
       const formDiscountCode = inputs.discountCode;
-
-      // User inputted discount code
       const discountCodes = formDiscountCode ? [formDiscountCode] : [];
-
-      // Combine discount codes already applied on cart
       discountCodes.push(...inputs.discountCodes);
-
       result = await cart.updateDiscountCodes(discountCodes);
       break;
     }
     case CartForm.ACTIONS.GiftCardCodesAdd: {
       const formGiftCardCode = inputs.giftCardCode;
-
       const giftCardCodes = formGiftCardCode ? [formGiftCardCode] : [];
-
       result = await cart.addGiftCardCodes(giftCardCodes);
       break;
     }
@@ -99,21 +83,19 @@ export async function action({request, context}) {
   );
 }
 
-/**
- * @param {Route.LoaderArgs}
- */
 export async function loader({context}) {
   const {cart} = context;
   return await cart.get();
 }
 
 export default function Cart() {
-  /** @type {LoaderReturnData} */
   const cart = useLoaderData();
 
   return (
-    <div className="cart">
-      <h1>Cart</h1>
+    <div className="py-4 md:py-8">
+      <h1 className="text-2xl md:text-3xl font-bold text-primary mb-6">
+        Cart
+      </h1>
       <CartMain layout="page" cart={cart} />
     </div>
   );

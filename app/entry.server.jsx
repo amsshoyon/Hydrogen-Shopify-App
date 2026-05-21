@@ -21,7 +21,12 @@ export default async function handleRequest(
     shop: {
       checkoutDomain: context.env.PUBLIC_CHECKOUT_DOMAIN,
       storeDomain: context.env.PUBLIC_STORE_DOMAIN,
-    }
+    },
+    mediaSrc: [
+      "'self'", 
+      "https://cdn.shopify.com", 
+      "*.p-a.io",
+    ]
   });
 
   const body = await renderToReadableStream(

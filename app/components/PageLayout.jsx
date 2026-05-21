@@ -1,18 +1,15 @@
-import {Await, Link} from 'react-router';
-import {Suspense, useId} from 'react';
-import {Aside} from '~/components/Aside';
-import {Footer} from '~/components/Footer';
-import {Header, HeaderMenu} from '~/components/Header';
-import {CartMain} from '~/components/CartMain';
+import { Await, Link } from 'react-router';
+import { Suspense, useId } from 'react';
+import { Aside } from '~/components/Aside';
+import { Footer } from '~/components/Footer';
+import { Header, HeaderMenu } from '~/components/Header';
+import { CartMain } from '~/components/CartMain';
 import {
   SEARCH_ENDPOINT,
   SearchFormPredictive,
 } from '~/components/SearchFormPredictive';
-import {SearchResultsPredictive} from '~/components/SearchResultsPredictive';
+import { SearchResultsPredictive } from '~/components/SearchResultsPredictive';
 
-/**
- * @param {PageLayoutProps}
- */
 export function PageLayout({
   cart,
   children = null,
@@ -34,7 +31,11 @@ export function PageLayout({
           publicStoreDomain={publicStoreDomain}
         />
       )}
-      <main>{children}</main>
+      <main>
+        <div className="container mx-auto max-w-[1400px] py-4 md:py-8">
+          {children}
+        </div>
+      </main>
       <Footer
         footer={footer}
         header={header}
@@ -44,13 +45,14 @@ export function PageLayout({
   );
 }
 
-/**
- * @param {{cart: PageLayoutProps['cart']}}
- */
-function CartAside({cart}) {
+function CartAside({ cart }) {
   return (
     <Aside type="cart" heading="CART">
-      <Suspense fallback={<p>Loading cart ...</p>}>
+      <Suspense fallback={
+        <div className="flex items-center justify-center py-12">
+          <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        </div>
+      }>
         <Await resolve={cart}>
           {(cart) => {
             return <CartMain cart={cart} layout="aside" />;
@@ -66,31 +68,39 @@ function SearchAside() {
   return (
     <Aside type="search" heading="SEARCH">
       <div className="predictive-search">
-        <br />
         <SearchFormPredictive>
-          {({fetchResults, goToSearch, inputRef}) => (
-            <>
+          {({ fetchResults, goToSearch, inputRef }) => (
+            <div className="flex gap-2 mb-4">
               <input
                 name="q"
                 onChange={fetchResults}
                 onFocus={fetchResults}
-                placeholder="Search"
+                placeholder="Search products..."
                 ref={inputRef}
                 type="search"
                 list={queriesDatalistId}
+                className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-colors"
               />
-              &nbsp;
-              <button onClick={goToSearch}>Search</button>
-            </>
+              <button
+                onClick={goToSearch}
+                className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover transition-colors"
+              >
+                Search
+              </button>
+            </div>
           )}
         </SearchFormPredictive>
 
         <SearchResultsPredictive>
-          {({items, total, term, state, closeSearch}) => {
-            const {articles, collections, pages, products, queries} = items;
+          {({ items, total, term, state, closeSearch }) => {
+            const { articles, collections, pages, products, queries } = items;
 
             if (state === 'loading' && term.current) {
-              return <div>Loading...</div>;
+              return (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                </div>
+              );
             }
 
             if (!total) {
@@ -127,11 +137,9 @@ function SearchAside() {
                   <Link
                     onClick={closeSearch}
                     to={`${SEARCH_ENDPOINT}?q=${term.current}`}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-accent-hover transition-colors mt-4"
                   >
-                    <p>
-                      View all results for <q>{term.current}</q>
-                      &nbsp; →
-                    </p>
+                    View all results for &ldquo;{term.current}&rdquo; &rarr;
                   </Link>
                 ) : null}
               </>
@@ -143,13 +151,7 @@ function SearchAside() {
   );
 }
 
-/**
- * @param {{
- *   header: PageLayoutProps['header'];
- *   publicStoreDomain: PageLayoutProps['publicStoreDomain'];
- * }}
- */
-function MobileMenuAside({header, publicStoreDomain}) {
+function MobileMenuAside({ header, publicStoreDomain }) {
   return (
     header.menu &&
     header.shop.primaryDomain?.url && (

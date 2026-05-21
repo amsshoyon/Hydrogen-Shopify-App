@@ -2,24 +2,25 @@ import {CartForm, Money} from '@shopify/hydrogen';
 import {useEffect, useId, useRef, useState} from 'react';
 import {useFetcher} from 'react-router';
 
-/**
- * @param {CartSummaryProps}
- */
 export function CartSummary({cart, layout}) {
-  const className =
-    layout === 'page' ? 'cart-summary-page' : 'cart-summary-aside';
   const summaryId = useId();
   const discountsHeadingId = useId();
   const discountCodeInputId = useId();
   const giftCardHeadingId = useId();
   const giftCardInputId = useId();
 
+  const summaryClasses = layout === 'page'
+    ? 'mt-8 rounded-2xl border border-border bg-surface p-6'
+    : 'mt-6 pt-4 border-t border-border';
+
   return (
-    <div aria-labelledby={summaryId} className={className}>
-      <h4 id={summaryId}>Totals</h4>
-      <dl role="group" className="cart-subtotal">
-        <dt>Subtotal</dt>
-        <dd>
+    <div aria-labelledby={summaryId} className={summaryClasses}>
+      <h4 id={summaryId} className="text-sm font-bold uppercase tracking-wider text-muted mb-4">
+        Order Summary
+      </h4>
+      <dl role="group" className="flex items-center justify-between mb-3">
+        <dt className="text-sm text-muted">Subtotal</dt>
+        <dd className="text-sm font-semibold">
           {cart?.cost?.subtotalAmount?.amount ? (
             <Money data={cart?.cost?.subtotalAmount} />
           ) : (
@@ -42,29 +43,22 @@ export function CartSummary({cart, layout}) {
   );
 }
 
-/**
- * @param {{checkoutUrl?: string}}
- */
 function CartCheckoutActions({checkoutUrl}) {
   if (!checkoutUrl) return null;
 
   return (
-    <div>
-      <a href={checkoutUrl} target="_self">
-        <p>Continue to Checkout &rarr;</p>
+    <div className="mt-6">
+      <a
+        href={checkoutUrl}
+        target="_self"
+        className="block w-full text-center rounded-xl bg-accent text-white py-3.5 px-6 font-semibold text-sm tracking-wide uppercase hover:bg-accent-hover transition-colors"
+      >
+        Checkout &rarr;
       </a>
-      <br />
     </div>
   );
 }
 
-/**
- * @param {{
- *   discountCodes?: CartApiQueryFragment['discountCodes'];
- *   discountsHeadingId: string;
- *   discountCodeInputId: string;
- * }}
- */
 function CartDiscounts({
   discountCodes,
   discountsHeadingId,
@@ -76,20 +70,24 @@ function CartDiscounts({
       ?.map(({code}) => code) || [];
 
   return (
-    <section aria-label="Discounts">
-      {/* Have existing discount, display it with a remove option */}
+    <section aria-label="Discounts" className="mb-4">
       <dl hidden={!codes.length}>
         <div>
-          <dt id={discountsHeadingId}>Discounts</dt>
+          <dt id={discountsHeadingId} className="text-xs font-semibold uppercase text-muted mb-2">
+            Discounts
+          </dt>
           <UpdateDiscountForm>
             <div
-              className="cart-discount"
+              className="flex items-center gap-2"
               role="group"
               aria-labelledby={discountsHeadingId}
             >
-              <code>{codes?.join(', ')}</code>
-              &nbsp;
-              <button type="submit" aria-label="Remove discount">
+              <code className="rounded-md bg-surface px-2 py-1 text-xs font-mono">{codes?.join(', ')}</code>
+              <button
+                type="submit"
+                aria-label="Remove discount"
+                className="text-xs text-muted hover:text-danger transition-colors"
+              >
                 Remove
               </button>
             </div>
@@ -97,9 +95,8 @@ function CartDiscounts({
         </div>
       </dl>
 
-      {/* Show an input to apply a discount */}
       <UpdateDiscountForm discountCodes={codes}>
-        <div>
+        <div className="flex gap-2 mt-3">
           <label htmlFor={discountCodeInputId} className="sr-only">
             Discount code
           </label>
@@ -108,9 +105,13 @@ function CartDiscounts({
             type="text"
             name="discountCode"
             placeholder="Discount code"
+            className="flex-1 rounded-lg border border-border px-3 py-2 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-colors"
           />
-          &nbsp;
-          <button type="submit" aria-label="Apply discount code">
+          <button
+            type="submit"
+            aria-label="Apply discount code"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface transition-colors"
+          >
             Apply
           </button>
         </div>
@@ -119,12 +120,6 @@ function CartDiscounts({
   );
 }
 
-/**
- * @param {{
- *   discountCodes?: string[];
- *   children: React.ReactNode;
- * }}
- */
 function UpdateDiscountForm({discountCodes, children}) {
   return (
     <CartForm
@@ -139,13 +134,6 @@ function UpdateDiscountForm({discountCodes, children}) {
   );
 }
 
-/**
- * @param {{
- *   giftCardCodes: CartApiQueryFragment['appliedGiftCards'] | undefined;
- *   giftCardHeadingId: string;
- *   giftCardInputId: string;
- * }}
- */
 function CartGiftCard({giftCardCodes, giftCardHeadingId, giftCardInputId}) {
   const giftCardCodeInput = useRef(null);
   const removeButtonRefs = useRef(new Map());
@@ -194,12 +182,14 @@ function CartGiftCard({giftCardCodes, giftCardHeadingId, giftCardInputId}) {
   };
 
   return (
-    <section aria-label="Gift cards">
+    <section aria-label="Gift cards" className="mb-2">
       {giftCardCodes && giftCardCodes.length > 0 && (
-        <dl>
-          <dt id={giftCardHeadingId}>Applied Gift Card(s)</dt>
+        <dl className="mb-3">
+          <dt id={giftCardHeadingId} className="text-xs font-semibold uppercase text-muted mb-2">
+            Applied Gift Card(s)
+          </dt>
           {giftCardCodes.map((giftCard) => (
-            <dd key={giftCard.id} className="cart-discount">
+            <dd key={giftCard.id} className="flex items-center gap-2 mb-1">
               <RemoveGiftCardForm
                 giftCardId={giftCard.id}
                 lastCharacters={giftCard.lastCharacters}
@@ -212,9 +202,10 @@ function CartGiftCard({giftCardCodes, giftCardHeadingId, giftCardInputId}) {
                   }
                 }}
               >
-                <code>***{giftCard.lastCharacters}</code>
-                &nbsp;
-                <Money data={giftCard.amountUsed} />
+                <code className="rounded-md bg-surface px-2 py-1 text-xs font-mono">***{giftCard.lastCharacters}</code>
+                <span className="text-xs text-muted">
+                  <Money data={giftCard.amountUsed} />
+                </span>
               </RemoveGiftCardForm>
             </dd>
           ))}
@@ -222,7 +213,7 @@ function CartGiftCard({giftCardCodes, giftCardHeadingId, giftCardInputId}) {
       )}
 
       <AddGiftCardForm fetcherKey="gift-card-add">
-        <div>
+        <div className="flex gap-2 mt-2">
           <label htmlFor={giftCardInputId} className="sr-only">
             Gift card code
           </label>
@@ -232,12 +223,13 @@ function CartGiftCard({giftCardCodes, giftCardHeadingId, giftCardInputId}) {
             name="giftCardCode"
             placeholder="Gift card code"
             ref={giftCardCodeInput}
+            className="flex-1 rounded-lg border border-border px-3 py-2 text-sm focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-colors"
           />
-          &nbsp;
           <button
             type="submit"
             disabled={giftCardAddFetcher.state !== 'idle'}
             aria-label="Apply gift card code"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface transition-colors disabled:opacity-50"
           >
             Apply
           </button>
@@ -247,12 +239,6 @@ function CartGiftCard({giftCardCodes, giftCardHeadingId, giftCardInputId}) {
   );
 }
 
-/**
- * @param {{
- *   fetcherKey?: string;
- *   children: React.ReactNode;
- * }}
- */
 function AddGiftCardForm({fetcherKey, children}) {
   return (
     <CartForm
@@ -265,15 +251,6 @@ function AddGiftCardForm({fetcherKey, children}) {
   );
 }
 
-/**
- * @param {{
- *   giftCardId: string;
- *   lastCharacters: string;
- *   children: React.ReactNode;
- *   onRemoveClick?: () => void;
- *   buttonRef?: (el: HTMLButtonElement | null) => void;
- * }}
- */
 function RemoveGiftCardForm({
   giftCardId,
   lastCharacters,
@@ -290,12 +267,12 @@ function RemoveGiftCardForm({
       }}
     >
       {children}
-      &nbsp;
       <button
         type="submit"
         aria-label={`Remove gift card ending in ${lastCharacters}`}
         onClick={onRemoveClick}
         ref={buttonRef}
+        className="text-xs text-muted hover:text-danger transition-colors ml-2"
       >
         Remove
       </button>

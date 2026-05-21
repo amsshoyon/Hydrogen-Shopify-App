@@ -1,21 +1,6 @@
 import {createContext, useContext, useEffect, useState} from 'react';
 import {useId} from 'react';
 
-/**
- * A side bar component with Overlay
- * @example
- * ```jsx
- * <Aside type="search" heading="SEARCH">
- *  <input type="search" />
- *  ...
- * </Aside>
- * ```
- * @param {{
- *   children?: React.ReactNode;
- *   type: AsideType;
- *   heading: React.ReactNode;
- * }}
- */
 export function Aside({children, heading, type}) {
   const {type: activeType, close} = useAside();
   const expanded = type === activeType;
@@ -40,19 +25,40 @@ export function Aside({children, heading, type}) {
   return (
     <div
       aria-modal
-      className={`overlay ${expanded ? 'expanded' : ''}`}
+      className={`fixed inset-0 z-50 transition-all duration-300 ${
+        expanded ? 'visible opacity-100' : 'invisible opacity-0'
+      }`}
       role="dialog"
       aria-labelledby={id}
     >
-      <button className="close-outside" onClick={close} />
-      <aside>
-        <header>
-          <h3 id={id}>{heading}</h3>
-          <button className="close reset" onClick={close} aria-label="Close">
-            &times;
+      <div
+        className={`absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300 ${
+          expanded ? 'opacity-100' : 'opacity-0'
+        }`}
+        onClick={close}
+      />
+      <aside
+        className={`absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl transform transition-transform duration-300 ease-out ${
+          expanded ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <header className="flex items-center justify-between h-16 px-6 border-b border-border">
+          <h3 id={id} className="text-sm font-bold uppercase tracking-widest text-primary">
+            {heading}
+          </h3>
+          <button
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface transition-colors text-muted hover:text-primary"
+            onClick={close}
+            aria-label="Close"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </header>
-        <main>{children}</main>
+        <main className="p-6 overflow-y-auto" style={{maxHeight: 'calc(100vh - 4rem)'}}>
+          {children}
+        </main>
       </aside>
     </div>
   );

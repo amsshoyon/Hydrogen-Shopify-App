@@ -20,6 +20,6 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ['.tryhydrogen.dev'],
+    allowedHosts: ['.tryhydrogen.dev', 'legal-rings-type.loca.lt'],
   },
 });

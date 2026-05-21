@@ -1,15 +1,12 @@
 import {Suspense} from 'react';
 import {Await, NavLink} from 'react-router';
 
-/**
- * @param {FooterProps}
- */
 export function Footer({footer: footerPromise, header, publicStoreDomain}) {
   return (
     <Suspense>
       <Await resolve={footerPromise}>
         {(footer) => (
-          <footer className="footer">
+          <footer className="bg-surface-dark mt-auto border-t border-border-dark">
             {footer?.menu && header.shop.primaryDomain?.url && (
               <FooterMenu
                 menu={footer.menu}
@@ -17,6 +14,16 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
                 publicStoreDomain={publicStoreDomain}
               />
             )}
+            <div className="border-t border-border-dark">
+              <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <p className="text-sm text-gray-400">
+                  &copy; {new Date().getFullYear()} {header.shop.name}. All rights reserved.
+                </p>
+                <p className="text-xs text-gray-500">
+                  Powered by Hydrogen
+                </p>
+              </div>
+            </div>
           </footer>
         )}
       </Await>
@@ -24,42 +31,43 @@ export function Footer({footer: footerPromise, header, publicStoreDomain}) {
   );
 }
 
-/**
- * @param {{
- *   menu: FooterQuery['menu'];
- *   primaryDomainUrl: FooterProps['header']['shop']['primaryDomain']['url'];
- *   publicStoreDomain: string;
- * }}
- */
 function FooterMenu({menu, primaryDomainUrl, publicStoreDomain}) {
   return (
-    <nav className="footer-menu" role="navigation">
-      {(menu || FALLBACK_FOOTER_MENU).items.map((item) => {
-        if (!item.url) return null;
-        // if the url is internal, we strip the domain
-        const url =
-          item.url.includes('myshopify.com') ||
-          item.url.includes(publicStoreDomain) ||
-          item.url.includes(primaryDomainUrl)
-            ? new URL(item.url).pathname
-            : item.url;
-        const isExternal = !url.startsWith('/');
-        return isExternal ? (
-          <a href={url} key={item.id} rel="noopener noreferrer" target="_blank">
-            {item.title}
-          </a>
-        ) : (
-          <NavLink
-            end
-            key={item.id}
-            prefetch="intent"
-            style={activeLinkStyle}
-            to={url}
-          >
-            {item.title}
-          </NavLink>
-        );
-      })}
+    <nav className="max-w-7xl mx-auto px-4 py-8" role="navigation">
+      <div className="flex flex-wrap justify-center gap-x-8 gap-y-3">
+        {(menu || FALLBACK_FOOTER_MENU).items.map((item) => {
+          if (!item.url) return null;
+          const url =
+            item.url.includes('myshopify.com') ||
+            item.url.includes(publicStoreDomain) ||
+            item.url.includes(primaryDomainUrl)
+              ? new URL(item.url).pathname
+              : item.url;
+          const isExternal = !url.startsWith('/');
+          return isExternal ? (
+            <a
+              href={url}
+              key={item.id}
+              rel="noopener noreferrer"
+              target="_blank"
+              className="text-sm text-gray-300 hover:text-white transition-colors font-medium"
+            >
+              {item.title}
+            </a>
+          ) : (
+            <NavLink
+              end
+              key={item.id}
+              prefetch="intent"
+              style={activeLinkStyle}
+              to={url}
+              className="text-sm text-gray-300 hover:text-white transition-colors font-medium"
+            >
+              {item.title}
+            </NavLink>
+          );
+        })}
+      </div>
     </nav>
   );
 }
@@ -106,12 +114,6 @@ const FALLBACK_FOOTER_MENU = {
   ],
 };
 
-/**
- * @param {{
- *   isActive: boolean;
- *   isPending: boolean;
- * }}
- */
 function activeLinkStyle({isActive, isPending}) {
   return {
     fontWeight: isActive ? 'bold' : undefined,

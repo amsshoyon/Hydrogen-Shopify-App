@@ -1,5 +1,4 @@
 import {Analytics, getShopAnalytics, useNonce} from '@shopify/hydrogen';
-import { useEffect, useState } from 'react';
 import {
   Outlet,
   useRouteError,
@@ -16,7 +15,9 @@ import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
 import {PageLayout} from './components/PageLayout';
-import { storeData } from './storeData';
+import {DiscoveryOsProvider} from '~/context/DiscoveryOsContext';
+import paWidgetCss from 'pa-widget/css?url';
+import paWidgetJs from 'pa-widget/js?url';
 
 export const shouldRevalidate = ({formMethod, currentUrl, nextUrl}) => {
   if (formMethod && formMethod !== 'GET') return true;
@@ -35,6 +36,19 @@ export function links() {
     {
       rel: 'preconnect',
       href: 'https://shop.app',
+    },
+    {
+      rel: 'preconnect',
+      href: 'https://fonts.googleapis.com',
+    },
+    {
+      rel: 'preconnect',
+      href: 'https://fonts.gstatic.com',
+      crossOrigin: 'anonymous',
+    },
+    {
+      rel: 'stylesheet',
+      href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
     },
     {rel: 'icon', type: 'image/svg+xml', href: favicon},
   ];
@@ -112,6 +126,7 @@ export function Layout({children}) {
         <link rel="stylesheet" href={tailwindCss}></link>
         <link rel="stylesheet" href={resetStyles}></link>
         <link rel="stylesheet" href={appStyles}></link>
+        <link rel="stylesheet" href={paWidgetCss}></link>
         <Meta />
         <Links />
       </head>
@@ -119,7 +134,7 @@ export function Layout({children}) {
         {children}
         <ScrollRestoration nonce={nonce} />
         <Scripts nonce={nonce} />
-        <script src="http://localhost:5173/pa-widgets.js" defer></script>
+        <script src={paWidgetJs} defer nonce={nonce} />
       </body>
     </html>
   );
@@ -127,35 +142,22 @@ export function Layout({children}) {
 
 export default function App() {
   const data = useRouteLoaderData('root');
-  const [availableWidgets, setAvailableWidgets] = useState([]);
 
-  if(typeof window !== 'undefined') {
-    window.paDiscoveryOsApp = window.paDiscoveryOsApp || {};
-    window.paDiscoveryOsApp.storeData = storeData;
-  }
-
-  useEffect(() => {
-    const handleContextReady = (event) => {
-      console.log("EVENT FIRED! Widgets available:", event.detail?.widgets);
-      setAvailableWidgets(event.detail?.widgets || []);
-    };
-
-    window.addEventListener('pa-context-ready', handleContextReady);
-    return () => window.removeEventListener('pa-context-ready', handleContextReady);
-  }, []);
+  
 
   return (
-    <pa-context-provider>
-      {data ? (
-        <Analytics.Provider cart={data.cart} shop={data.shop} consent={data.consent}>
-          <PageLayout {...data}>
-            <Outlet />
-          </PageLayout>
-        </Analytics.Provider>
-      ) : (
-        <Outlet />
-      )}
-    </pa-context-provider>
+    <DiscoveryOsProvider>
+        {data ? (
+          <Analytics.Provider cart={data.cart} shop={data.shop} consent={data.consent}>
+            <PageLayout {...data}>
+              <pa-search-preview />
+              <Outlet />
+            </PageLayout>
+          </Analytics.Provider>
+        ) : (
+          <Outlet />
+        )}
+    </DiscoveryOsProvider>
   );
 }
 
@@ -172,13 +174,13 @@ export function ErrorBoundary() {
   }
 
   return (
-    <div className="route-error">
-      <h1>Oops</h1>
-      <h2>{errorStatus}</h2>
+    <div className="flex flex-col items-center justify-center min-h-[50vh] py-16 text-center">
+      <h1 className="text-4xl font-bold text-primary mb-2">Oops</h1>
+      <h2 className="text-lg font-semibold text-muted mb-4">{errorStatus}</h2>
       {errorMessage && (
-        <fieldset>
-          <pre>{errorMessage}</pre>
-        </fieldset>
+        <pre className="rounded-xl bg-surface border border-border px-6 py-4 text-sm text-danger max-w-lg overflow-auto">
+          {errorMessage}
+        </pre>
       )}
     </div>
   );
