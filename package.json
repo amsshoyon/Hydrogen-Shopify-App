@@ -22,7 +22,7 @@
     "react-dom": "^18.3.1",
     "react-router": "7.14.0",
     "react-router-dom": "7.14.0",
-    "tailwindcss": "^4.1.6"
+    "tailwindcss": "^4.1.6" 
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.5",
