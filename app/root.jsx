@@ -16,8 +16,6 @@ import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
 import {PageLayout} from './components/PageLayout';
 import {DiscoveryOsProvider} from '~/context/DiscoveryOsContext';
-import paWidgetCss from 'pa-widget/css?url';
-import paWidgetJs from 'pa-widget/js?url';
 
 export const shouldRevalidate = ({formMethod, currentUrl, nextUrl}) => {
   if (formMethod && formMethod !== 'GET') return true;
@@ -56,19 +54,18 @@ export function links() {
 
 export async function loader(args) {
   const deferredData = loadDeferredData(args);
-
   const criticalData = await loadCriticalData(args);
-
   const {storefront, env} = args.context;
+  const shop = await getShopAnalytics({
+    storefront,
+    publicStorefrontId: env.PUBLIC_STOREFRONT_ID,
+  });
 
   return {
     ...deferredData,
     ...criticalData,
     publicStoreDomain: env.PUBLIC_STORE_DOMAIN,
-    shop: getShopAnalytics({
-      storefront,
-      publicStorefrontId: env.PUBLIC_STOREFRONT_ID,
-    }),
+    shop,
     consent: {
       checkoutDomain: env.PUBLIC_CHECKOUT_DOMAIN,
       storefrontAccessToken: env.PUBLIC_STOREFRONT_API_TOKEN,
@@ -86,7 +83,7 @@ async function loadCriticalData({context}) {
     storefront.query(HEADER_QUERY, {
       cache: storefront.CacheLong(),
       variables: {
-        headerMenuHandle: 'main-menu', // Adjust to your header menu handle
+        headerMenuHandle: 'main-menu',
       },
     }),
   ]);
@@ -101,7 +98,7 @@ function loadDeferredData({context}) {
     .query(FOOTER_QUERY, {
       cache: storefront.CacheLong(),
       variables: {
-        footerMenuHandle: 'footer', // Adjust to your footer menu handle
+        footerMenuHandle: 'footer',
       },
     })
     .catch((error) => {
@@ -126,7 +123,7 @@ export function Layout({children}) {
         <link rel="stylesheet" href={tailwindCss}></link>
         <link rel="stylesheet" href={resetStyles}></link>
         <link rel="stylesheet" href={appStyles}></link>
-        <link rel="stylesheet" href={paWidgetCss}></link>
+        <link rel="stylesheet" href="/apps/discoveryos/assets/css"></link>
         <Meta />
         <Links />
       </head>
@@ -134,7 +131,7 @@ export function Layout({children}) {
         {children}
         <ScrollRestoration nonce={nonce} />
         <Scripts nonce={nonce} />
-        <script src={paWidgetJs} defer nonce={nonce} />
+        <script src="/apps/discoveryos/assets/js" defer nonce={nonce} /> 
       </body>
     </html>
   );
@@ -143,22 +140,25 @@ export function Layout({children}) {
 export default function App() {
   const data = useRouteLoaderData('root');
 
-  
+  if (data) return (
+    <Analytics.Provider
+      cart={data.cart}
+      shop={data.shop}
+      consent={data.consent}
+      canTrack={() => true}
+    >
+      <DiscoveryOsProvider currency={data.shop.currency}> 
+        <PageLayout {...data}>
+          <pa-search-preview />
+          <Outlet />
+        </PageLayout>
+      </DiscoveryOsProvider>
+    </Analytics.Provider>
+  )
 
   return (
-    <DiscoveryOsProvider>
-        {data ? (
-          <Analytics.Provider cart={data.cart} shop={data.shop} consent={data.consent}>
-            <PageLayout {...data}>
-              <pa-search-preview />
-              <Outlet />
-            </PageLayout>
-          </Analytics.Provider>
-        ) : (
-          <Outlet />
-        )}
-    </DiscoveryOsProvider>
-  );
+    <Outlet />
+  )
 }
 
 export function ErrorBoundary() {

@@ -1,45 +1,96 @@
-export async function loader({ request, context }) {
+let cachedCredentials = null;
+
+const discoveryOsAppUrl = 'https://introducing-lap-appliances-turned.trycloudflare.com';
+
+const APP_SIGNATURE_METAOBJECT_QUERY = `#graphql
+  query getAppSecret {
+    metaobject(handle: {type: "pa-discovery-os-app-signature", handle: "app-signature"}) {
+      appSecret: field(key: "app_secret") { value }
+    }
+  }
+`;
+
+const toHex = (buffer) =>
+  Array.from(new Uint8Array(buffer))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+
+async function signAppProxyQuery(params, secret) {
+  const sortedParams = Object.keys(params)
+    .sort()
+    .map((key) => `${key}=${params[key]}`)
+    .join('');
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    {name: 'HMAC', hash: 'SHA-256'},
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(sortedParams));
+  return toHex(signature);
+}
+
+async function getAppSecret(context) {
+  if (cachedCredentials) return cachedCredentials.appSecret;
+
+  const {metaobject} = await context.storefront.query(APP_SIGNATURE_METAOBJECT_QUERY, {
+    cache: context.storefront.CacheLong(),
+  });
+
+  const appSecret = metaobject?.appSecret?.value;
+  if (!appSecret) throw new Response('App credentials metaobject not found.', {status: 500});
+
+  cachedCredentials = {appSecret};
+  return appSecret;
+}
+
+async function buildSignedUrl(url, pathname, context) {
+  const shop = context.env.PUBLIC_STORE_DOMAIN;
+  if (!shop) throw new Response('PUBLIC_STORE_DOMAIN is not configured.', {status: 500});
+
+  const appSecret = await getAppSecret(context);
+
+  const signedParams = Object.fromEntries(
+    [...url.searchParams].filter(([key]) => !['shop', 'timestamp', 'signature'].includes(key)),
+  );
+  signedParams.shop = shop;
+  signedParams.timestamp = String(Math.floor(Date.now() / 1000));
+  signedParams.signature = await signAppProxyQuery(signedParams, appSecret);
+
+  const targetUrl = new URL(`${discoveryOsAppUrl}${pathname}`);
+  for (const [key, value] of Object.entries(signedParams)) {
+    targetUrl.searchParams.set(key, value);
+  }
+  return targetUrl;
+}
+
+export async function loader({request, context}) {
   return handleProxyRequest(request, context);
 }
 
-export async function action({ request, context }) {
+export async function action({request, context}) {
   return handleProxyRequest(request, context);
 }
 
 async function handleProxyRequest(request, context) {
-  const discoveryOsAppUrl = context.env.PUBLIC_APP_DISCOVERY_OS_URL;
   const url = new URL(request.url);
-  
   const pathname = url.pathname.replace(/^\/apps/, '');
-  const searchParams = url.search; 
-  const urlToFetch = `${discoveryOsAppUrl}${pathname}${searchParams}`;
 
   try {
-    const headers = new Headers();
-
-    headers.set('pa-client-id', context.env.PUBLIC_PA_CLIENT_ID);
-    headers.set('pa-client-secret', context.env.PUBLIC_PA_CLIENT_SECRET);
-    headers.set('Content-Type', 'application/json');
-    headers.set('Accept', 'application/json');
-
-    const customerToken = request.headers.get('X-Shopify-Customer-Access-Token');
-    if (customerToken) {
-      headers.set('X-Shopify-Customer-Access-Token', customerToken);
-    }
+    const targetUrl = await buildSignedUrl(url, pathname, context);
 
     const isGetOrHead = request.method === 'GET' || request.method === 'HEAD';
-    const requestBody = isGetOrHead ? undefined : await request.text();
-
-    const response = await fetch(urlToFetch, {
+    const response = await fetch(targetUrl.toString(), {
       method: request.method,
-      headers: headers,
-      body: requestBody,
+      headers: {'Content-Type': 'application/json', Accept: 'application/json'},
+      body: isGetOrHead ? undefined : await request.text(),
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Backend error (${response.status}):`, errorText);
-      throw new Response('Discovery OS app error', { status: response.status });
+      console.error(`Backend error (${response.status}):`, await response.text());
+      throw new Response('Discovery OS app error', {status: response.status});
     }
 
     return new Response(response.body, {
@@ -47,13 +98,9 @@ async function handleProxyRequest(request, context) {
       statusText: response.statusText,
       headers: new Headers(response.headers),
     });
-
   } catch (err) {
     console.error('Proxy Error:', err);
     if (err instanceof Response) throw err;
-    
-    const errStatus = err.status || 502;
-    const errMessage = err.message || 'Failed to reach Discovery OS app';
-    throw new Response(errMessage, { status: errStatus });
+    throw new Response(err.message || 'Failed to reach Discovery OS app', {status: err.status || 502});
   }
 }
