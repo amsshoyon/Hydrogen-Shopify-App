@@ -22,7 +22,7 @@ importers:
         version: 5.1.42
       pa-widget:
         specifier: github:amsshoyon/pa-widgets
-        version: https://codeload.github.com/amsshoyon/pa-widgets/tar.gz/e0a61a8755911c004179416c4b1a7609663c1a4a
+        version: https://codeload.github.com/amsshoyon/pa-widgets/tar.gz/c5e19ded97e1f04dab4061957bdfe7d96b6c9295
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -3443,8 +3443,8 @@ packages:
     resolution: {integrity: sha512-tkAQEw8ysMzmkhgw8k+1U/iPhWNhykKnSk4Rd5zLoPJCuJaGRPo6YposrZgaxHKzDHdDWWZvE/Sk7hsL2X/CpQ==}
     engines: {node: '>=18'}
 
-  pa-widget@https://codeload.github.com/amsshoyon/pa-widgets/tar.gz/e0a61a8755911c004179416c4b1a7609663c1a4a:
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/amsshoyon/pa-widgets/tar.gz/e0a61a8755911c004179416c4b1a7609663c1a4a}
+  pa-widget@https://codeload.github.com/amsshoyon/pa-widgets/tar.gz/c5e19ded97e1f04dab4061957bdfe7d96b6c9295:
+    resolution: {gitHosted: true, integrity: sha512-cDR3WGHdZgV3V06Yrm+d2RBnA70lxozNQSMbbVHL/H37Nt+HP0QdcgJvekT+tUSH64+cj82k5VgqVPl8fRICRQ==, tarball: https://codeload.github.com/amsshoyon/pa-widgets/tar.gz/c5e19ded97e1f04dab4061957bdfe7d96b6c9295}
     version: 1.0.0
 
   param-case@3.0.4:
@@ -3955,6 +3955,7 @@ packages:
   tsconfck@3.1.6:
     resolution: {integrity: sha512-ks6Vjr/jEw0P1gmOVwutM3B7fWxoWBL2KRDb1JfqGVawBmO5UsvmWOQFGHBPl5yxYz4eERr19E6L7NMv+Fej4w==}
     engines: {node: ^18 || >=20}
+    deprecated: unmaintained
     hasBin: true
     peerDependencies:
       typescript: ^5.0.0
@@ -7821,7 +7822,7 @@ snapshots:
 
   p-map@7.0.4: {}
 
-  pa-widget@https://codeload.github.com/amsshoyon/pa-widgets/tar.gz/e0a61a8755911c004179416c4b1a7609663c1a4a: {}
+  pa-widget@https://codeload.github.com/amsshoyon/pa-widgets/tar.gz/c5e19ded97e1f04dab4061957bdfe7d96b6c9295: {}
 
   param-case@3.0.4:
     dependencies:

@@ -1,58 +1,61 @@
-import {createContext, useContext, useEffect, useState} from 'react';
+import {useEffect, useState} from 'react';
+import {useAnalytics} from '@shopify/hydrogen';
+import {useMatches} from 'react-router';
+import {BRIDGED_EVENTS, parseProductRefId} from 'pa-widget/hydrogen';
 
-const DISCOVERY_OS_CONFIG_KEY = 'pa-discoveryos-config';
-const DiscoveryOsContext = createContext(null);
-
-export function DiscoveryOsProvider({children}) {
-  const [widgetList, setWidgetList] = useState([]);
-
-  const storeData = {
-    "currency": "AUD",
-  }
-
-  if(typeof window !== 'undefined') {
-    window.paDiscoveryOsApp = window.paDiscoveryOsApp || {};
-    window.paDiscoveryOsApp.storeData = storeData;
-  }
-
-  const readWidgetListFromStorage = () => {
-    if (typeof window === 'undefined') return [];
-  
-    try {
-      const raw = localStorage.getItem(DISCOVERY_OS_CONFIG_KEY);
-      if (!raw) return {};
-  
-      const config = JSON.parse(raw);
-      if(!config?.widgetList) return {};
-
-      const widgetMap = config.widgetList.reduce((acc, widget) => {
-        acc[widget.widget_name] = widget.widget_id;
-        return acc;
-    }, {});
-
-      return widgetMap;
-    } catch {
-      return {};
-    }
-  };
+export function CustomAnalytics() {
+  const {subscribe, register} = useAnalytics();
+  const {ready} = register('PA_Pixel_Bridge');
 
   useEffect(() => {
-    setWidgetList(readWidgetListFromStorage());
+    if (typeof window !== 'undefined') {
+      window.paPixelQueue = window.paPixelQueue || [];
+    }
+
+    BRIDGED_EVENTS.forEach((name) => {
+      subscribe(name, (data) => {
+        window.paPixelQueue?.push({name, data, ts: Date.now()});
+      });
+    });
+
+    ready();
   }, []);
 
-  return (
-    <DiscoveryOsContext.Provider value={{widgetList}}>
-      <pa-context-provider>
-        {children}
-      </pa-context-provider>
-    </DiscoveryOsContext.Provider>
-  );
+  return null;
 }
 
-export function useDiscoveryOs() {
-  const context = useContext(DiscoveryOsContext);
-  if (!context) {
-    throw new Error('useDiscoveryOs must be used within a DiscoveryOsProvider');
-  }
-  return context;
+export function useProductPage() {
+  const matches = useMatches();
+
+  const productMatch = matches.find((m) => m.id.includes('products.$handle'));
+  const product = productMatch?.data?.product ?? null;
+
+  return {
+    isProductPage: Boolean(productMatch),
+    handle: productMatch?.params?.handle ?? null,
+    product,
+    refId: parseProductRefId(product?.id),
+  };
+}
+
+export function DiscoveryOsProvider({children, currency = 'AUD'}) {
+  const {refId} = useProductPage();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
+
+  return (
+    <>
+      <CustomAnalytics />
+      <pa-context-provider
+        data-currency={currency}
+        data-product-ref-id={refId ?? ''}
+      />
+      {children}
+    </>
+  );
 }
